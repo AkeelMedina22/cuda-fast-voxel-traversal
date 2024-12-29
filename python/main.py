@@ -31,6 +31,7 @@ def test_point_cloud_roundtrip():
     plt.title('Depth Map')
     plt.axis('image') 
     
+    os.makedirs(os.path.join(os.path.dirname(current_dir), "output"), exist_ok=True)
     plt.savefig(os.path.join(os.path.dirname(current_dir), "output/depth_map.png"))
     plt.show()
 
