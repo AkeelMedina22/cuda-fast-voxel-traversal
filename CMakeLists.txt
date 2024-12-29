@@ -1,16 +1,13 @@
-# cmake -Dpybind11_DIR=$(python3.11 -c "import pybind11; print(pybind11.get_cmake_dir())") ..
-
 cmake_minimum_required(VERSION 3.22)
 project(cuda_fast_voxel_traversal)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Find Python and pybind11
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
-find_package(pybind11 CONFIG REQUIRED)
+add_subdirectory(extern/pybind11)
 
 # Add the pybind11 module
 pybind11_add_module(voxel_traversal

@@ -1,10 +1,15 @@
-import numpy as np
-import sys
+# Temp: Add build/lib dir to python path
 import os
-import cv2
+import sys
+current_dir = os.path.dirname(os.path.abspath(__file__))
+build_lib_path = os.path.join(os.path.dirname(current_dir), 'build', 'lib')
+print(f"Adding {build_lib_path} to sys.path")
+sys.path.append(build_lib_path)
+
+import numpy as np
 import matplotlib.pyplot as plt
-sys.path.append('../build/lib')
 import voxel_traversal
+
 
 def test_point_cloud_roundtrip():
     points = np.array([
@@ -26,7 +31,7 @@ def test_point_cloud_roundtrip():
     plt.title('Depth Map')
     plt.axis('image') 
     
-    plt.savefig('../output/depth_map.png')
+    plt.savefig(os.path.join(os.path.dirname(current_dir), "output/depth_map.png"))
     plt.show()
 
     print(f"Result shape: {result.shape}")
