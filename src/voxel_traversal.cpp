@@ -1,80 +1,75 @@
-#include "voxel_traversal.hpp"
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-
-void validate_pointcloud(const py::array_t<double> &points)
-{
-    py::buffer_info buf = points.request();
-    if (buf.ndim != 2)
-        throw std::runtime_error("Point cloud must be 2-dimensional");
-    if (buf.shape[1] != 3)
-        throw std::runtime_error("Points must be 3D (shape: N x 3)");
-}
-
-void validate_camera_pos(const py::array_t<double> &camera_pos)
-{
-    py::buffer_info buf = camera_pos.request();
-    if (buf.ndim != 1 || buf.shape[0] != 3)
-        throw std::runtime_error("Camera position must be a 3D point (shape: 3)");
-}
+#include <cstdint>
+#include <iostream>
+#include "voxel_traversal.cuh"
 
 namespace py = pybind11;
+
+void validate_voxelgrid(const py::array_t<uint64_t> &voxels)
+{
+    py::buffer_info buf = voxels.request();
+    if (buf.ndim != 1)
+        throw std::runtime_error("Voxel Grid must be a 1-dimensional array of Morton-Encoded ints");
+}
+
 namespace voxel_traversal
 {
 
-    py::array_t<double> create_point_cloud( // Changed return type to array
-        py::array_t<double> points,
-        py::array_t<double> camera_pos,
+    py::array_t<float> trace(
+        py::array_t<uint64_t> voxels,
+        py::array_t<float> ray_starts,
+        py::array_t<float> ray_ends,
+        float resolution,
         int image_width,
-        int image_height,
-        double focal_length = 1.0,
-        double sensor_width = 36.0,
-        double sensor_height = 24.0)
+        int image_height)
     {
-        // Validate inputs
-        validate_pointcloud(points);
-        validate_camera_pos(camera_pos);
+        validate_voxelgrid(voxels);
 
-        // Get raw pointers to the numpy array data
-        py::buffer_info points_buf = points.request();
-        py::buffer_info camera_buf = camera_pos.request();
+        py::buffer_info voxels_buf = voxels.request();
+        py::buffer_info camera_buf = ray_starts.request();
+        py::buffer_info ray_ends_buf = ray_ends.request();
 
-        double *points_ptr = static_cast<double *>(points_buf.ptr);
-        double *camera_ptr = static_cast<double *>(camera_buf.ptr);
-        size_t num_points = points_buf.shape[0];
+        uint64_t *voxels_ptr = static_cast<uint64_t *>(voxels_buf.ptr);
+        float *ray_starts_ptr = static_cast<float *>(camera_buf.ptr);
+        float *ray_ends_ptr = static_cast<float *>(ray_ends.request().ptr);
 
-        // Create output buffer
-        std::vector<double> output_data(image_width * image_height, 0.0); // Initialize with zeros
+        size_t num_voxels = voxels_buf.shape[0];
+        std::vector<float> output_data(image_width * image_height, 0.0);
 
-        // TODO: Your actual computation here
-        // This would modify output_data
+        launchRayTraceKernel(
+            output_data.data(),
+            voxels_ptr,
+            num_voxels,
+            ray_starts_ptr,
+            ray_ends_ptr,
+            resolution,
+            image_width,
+            image_height);
 
-        // Create output numpy array
         std::vector<ssize_t> shape = {image_height, image_width};
         std::vector<ssize_t> strides = {
-            static_cast<ssize_t>(image_width * sizeof(double)),
-            static_cast<ssize_t>(sizeof(double))};
+            static_cast<ssize_t>(image_width * sizeof(float)),
+            static_cast<ssize_t>(sizeof(float))};
 
-        // Return array with copy of our data
-        return py::array_t<double>(
+        return py::array_t<float>(
             shape,
             strides,
-            output_data.data() // Using our output buffer
-        );
+            output_data.data());
     }
+
 } // namespace voxel_traversal
 
 PYBIND11_MODULE(voxel_traversal, m)
 {
     m.doc() = "Fast voxel traversal module for ray tracing";
 
-    m.def("create_point_cloud", &voxel_traversal::create_point_cloud,
-          py::arg("points"),
-          py::arg("camera_pos"),
+    m.def("trace", &voxel_traversal::trace,
+          py::arg("voxels"),
+          py::arg("ray_starts"),
+          py::arg("ray_ends"),
+          py::arg("resolution"),
           py::arg("image_width"),
           py::arg("image_height"),
-          py::arg("focal_length") = 1.0,
-          py::arg("sensor_width") = 36.0,
-          py::arg("sensor_height") = 24.0,
-          "Ray trace a point cloud from given camera position");
+          "Ray trace a voxel grid from given camera position");
 }

@@ -10,6 +10,7 @@ dist/
 *.out
 *.app
 *.cu.o
+*.deb
 
 __pycache__/
 *.py[cod]
