@@ -77,15 +77,15 @@ def morton_decode_points(morton_codes: np.ndarray, resolution: float = 0.025) ->
     return points
 
 
-def generate_rays(height, width, camera_pos, pitch, yaw, roll, depth=7.0):
+def generate_rays(height, width, camera_pos, pitch, yaw, roll, depth=7.0, cube_size=7.0):
     """In essence, this function is creating a point cloud (ray_end) 
     for visibility checking against the voxel grid"""
 
     # Creates Orthographic rays from the pos+pose in the direction of the test case pcd
-    direction = np.array([1, 1, 1])  
+    direction = np.array([0, 0, 1])
     
-    x = np.linspace(-width/2, width/2, width)
-    y = np.linspace(-height/2, height/2, height)
+    x = np.linspace(-cube_size/2, cube_size/2, width)
+    y = np.linspace(-cube_size/2, cube_size/2, height)
     X, Y = np.meshgrid(x, y)
     
     ray_starts = np.zeros((height, width, 3))
@@ -102,16 +102,13 @@ def generate_rays(height, width, camera_pos, pitch, yaw, roll, depth=7.0):
 def test():
     os.makedirs(os.path.join(os.path.dirname(current_dir), "output"), exist_ok=True)
 
-    points = np.array([
-        [-500, -500, -500],
-        [-500, -500.001, -500.001],
-        [-1, -2, -3],
-        [1, 2, 3],
-        [4, 5, 6],
-        [7, 8, 9],
-        [500, 500, 500],
-        [500, 500, 500]
-    ], dtype=np.float32)
+    x = np.linspace(-2.5, 2.5, 50) 
+    y = np.linspace(-2.5, 2.5, 50)
+    z = np.linspace(0, 1, 50)
+
+    X, Y, Z = np.meshgrid(x, y, z)
+
+    points = np.column_stack((X.flatten(), Y.flatten(), Z.flatten())).astype(np.float32)
 
     voxels = morton_encode_points(points, resolution=0.025)
 
@@ -119,13 +116,13 @@ def test():
     voxels = np.unique(voxels)
     np.save(os.path.join(os.path.dirname(current_dir), "output/voxels.npy"), voxels)
 
-    camera_position = np.array([0, 0, 0], dtype=np.float32)
-    pose = np.array([0, 0, 0], dtype=np.float32)
+    camera_position = np.array([0, 0, -3.5], dtype=np.float32)
+    pose = np.array([0, 0, 0], dtype=np.float32)  # Looking along [1,1,1]
 
     ray_starts, ray_ends = generate_rays(640, 480, camera_position, *pose)
     
     # Pass to C++ using Pybind11
-    result = voxel_traversal.trace(voxels, ray_starts, ray_ends, 640, 480, resolution=0.025)
+    result = voxel_traversal.trace(voxels, ray_starts, ray_ends, 0.025, 640, 480)
 
     plt.figure(figsize=(10, 8))
     

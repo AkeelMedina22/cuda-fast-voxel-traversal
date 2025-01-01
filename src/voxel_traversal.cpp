@@ -1,8 +1,8 @@
+#include "voxel_traversal.cuh"
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <cstdint>
 #include <iostream>
-#include "voxel_traversal.cuh"
 
 namespace py = pybind11;
 
@@ -37,7 +37,7 @@ namespace voxel_traversal
         size_t num_voxels = voxels_buf.shape[0];
         std::vector<float> output_data(image_width * image_height, 0.0);
 
-        launchRayTraceKernel(
+        launchVisibilityCheck(
             output_data.data(),
             voxels_ptr,
             num_voxels,
