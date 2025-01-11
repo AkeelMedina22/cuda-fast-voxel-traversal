@@ -103,9 +103,9 @@ __device__ inline uint64_t expand_bits(uint64_t x)
 
 __device__ inline uint64_t encode_morton(const int3 &point, const float resolution)
 {
-    uint64_t x = static_cast<uint64_t>(static_cast<float>(point.x) / resolution + 100000);
-    uint64_t y = static_cast<uint64_t>(static_cast<float>(point.y) / resolution + 100000);
-    uint64_t z = static_cast<uint64_t>(static_cast<float>(point.z) / resolution + 100000);
+    uint64_t x = static_cast<uint64_t>(static_cast<float>(point.x) / resolution) + 100000;
+    uint64_t y = static_cast<uint64_t>(static_cast<float>(point.y) / resolution) + 100000;
+    uint64_t z = static_cast<uint64_t>(static_cast<float>(point.z) / resolution) + 100000;
 
     x &= 0x1FFFFF;
     y &= 0x1FFFFF;
@@ -231,7 +231,6 @@ __global__ void visibilityCheckKernel(
         }
 
         uint64_t morton_code = encode_morton(start_voxel, resolution);
-        uint64_t end_morton = encode_morton(ray_end / resolution, resolution);
 
         int start = 0;
         int end = num_voxels - 1;
@@ -251,6 +250,7 @@ __global__ void visibilityCheckKernel(
                     depth_image[idx] = hit_distance;
                     return;
                 }
+                depth_image[idx] = end_distance;
                 break;
             }
             else if (voxel < morton_code)
@@ -263,6 +263,8 @@ __global__ void visibilityCheckKernel(
             }
         }
     }
+    float end_distance = norm_f3(ray_end - ray_start);
+    depth_image[idx] = end_distance;
 }
 
 void launchVisibilityCheck(

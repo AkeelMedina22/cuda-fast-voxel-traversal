@@ -96,14 +96,17 @@ def generate_rays(height, width, camera_pos, pitch, yaw, roll, depth=7.0, cube_s
     # just translate forward in the dir of pcd (orthographic) 
     ray_ends = ray_starts + direction * depth
 
-    return ray_starts, ray_ends
+    ray_starts_flat = np.ascontiguousarray(ray_starts).astype(np.float32).reshape(-1)
+    ray_ends_flat = np.ascontiguousarray(ray_ends).astype(np.float32).reshape(-1)
+
+    return ray_starts_flat, ray_ends_flat
 
 
 def test():
     os.makedirs(os.path.join(os.path.dirname(current_dir), "output"), exist_ok=True)
 
-    x = np.linspace(-2.5, 2.5, 50) 
-    y = np.linspace(-2.5, 2.5, 50)
+    x = np.linspace(-0.25, 0.25, 100) 
+    y = np.linspace(-0.25, 0.25, 100)
     z = np.linspace(0, 1, 50)
 
     X, Y, Z = np.meshgrid(x, y, z)
@@ -117,12 +120,12 @@ def test():
     np.save(os.path.join(os.path.dirname(current_dir), "output/voxels.npy"), voxels)
 
     camera_position = np.array([0, 0, -3.5], dtype=np.float32)
-    pose = np.array([0, 0, 0], dtype=np.float32)  # Looking along [1,1,1]
+    pose = np.array([0, 0, 0], dtype=np.float32) 
 
     ray_starts, ray_ends = generate_rays(640, 480, camera_position, *pose)
-    
+
     # Pass to C++ using Pybind11
-    result = voxel_traversal.trace(voxels, ray_starts, ray_ends, 0.025, 640, 480)
+    result = voxel_traversal.trace(np.ascontiguousarray(voxels).astype(np.uint64), ray_starts, ray_ends, 0.025, 640, 480)
 
     plt.figure(figsize=(10, 8))
     

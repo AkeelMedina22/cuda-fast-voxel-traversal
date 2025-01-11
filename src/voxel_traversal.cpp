@@ -35,10 +35,13 @@ namespace voxel_traversal
         float *ray_ends_ptr = static_cast<float *>(ray_ends.request().ptr);
 
         size_t num_voxels = voxels_buf.shape[0];
-        std::vector<float> output_data(image_width * image_height, 0.0);
+
+        py::array_t<float> result({image_width, image_height});
+        py::buffer_info buf = result.request();
+        float *ptr = static_cast<float *>(buf.ptr);
 
         launchVisibilityCheck(
-            output_data.data(),
+            ptr,
             voxels_ptr,
             num_voxels,
             ray_starts_ptr,
@@ -47,15 +50,7 @@ namespace voxel_traversal
             image_width,
             image_height);
 
-        std::vector<ssize_t> shape = {image_height, image_width};
-        std::vector<ssize_t> strides = {
-            static_cast<ssize_t>(image_width * sizeof(float)),
-            static_cast<ssize_t>(sizeof(float))};
-
-        return py::array_t<float>(
-            shape,
-            strides,
-            output_data.data());
+        return result;
     }
 
 } // namespace voxel_traversal
